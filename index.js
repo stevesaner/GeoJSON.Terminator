@@ -131,11 +131,28 @@ class Terminator {
     return lat;
   }
 
+  _haTwilight (elvAngle, lat, sunPos) {
+    /* For a given solar elevation angle and a latitude, compute
+     * the hour angle of the longitude. */
+    var ha = Math.acos((Math.sin(elvAngle * this._D2R) -
+	Math.sin(lat * this._D2R) * Math.sin(sunPos.delta * this._D2R)) /
+	(Math.cos(lat * this._D2R) * Math.cos(sunPos.delta * this._D2R))) *
+	this._R2D;
+    return ha;
+  }
+
+  _lonTwilight (ha, lat, sunPos, gst) {
+    /* Compute longitude given and a latitude */
+    var lon = ha + sunPos.alpha - 15 * gst;
+    return lon;
+  }
+    
   _compute (time) {
     var today = time ? new Date(time) : new Date();
     var julianDay = julian(today);
     var gst = GMST(julianDay);
     var latLng = [];
+    var latLngTw = [];
     var startMinus = -360;
 
     var sunEclPos = this._sunEclipticPosition(julianDay);
@@ -144,7 +161,11 @@ class Terminator {
     for (var i = 0; i <= 720 * this.options.resolution; i++) {
       var lng = startMinus + i / this.options.resolution;
       var ha = this._hourAngle(lng, sunEqPos, gst);
-      latLng[i + 1] = [this._latitude(ha, sunEqPos), lng];
+      var lat = this._latitude(ha, sunEqPos);
+      latLng[i + 1] = [lat, lng];
+      
+      var haTw = this._haTwilight(-6, lat, sunEqPos);
+      latLngTw[i + 1] = [lat, this._lonTwilight(haTw, lat, sunEqPos, gst)];
     }
     if (sunEqPos.delta < 0) {
       latLng[0] = [90, startMinus];
